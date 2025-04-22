@@ -23,8 +23,7 @@ for (const folder of commandFiles) {
         const command = require(filePath);
         if ('data' in command && 'execute' in command) {
             client.commands.set(command.data.name, command);
-        }
-        else {
+        } else {
             console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
         }
 
@@ -32,11 +31,35 @@ for (const folder of commandFiles) {
 }
 
 client.on(Events.interactionCreate, async (interaction: {
+    client: any;
+    followUp(arg0: { content: string; ephemeral: boolean; }): unknown;
+    deferred: any;
+    replied: any;
     isChatInputCommand(): unknown; isCommand: () => any; commandName: any; reply: (arg0: { content: string; ephemeral: boolean; }) => void; 
 }) => {
     if (!interaction.isChatInputCommand()) return;
+
+    const command = interaction.client.commands.get(interaction.commandName);
+
+    if (!command) {
+        console.error(`No command matching ${interaction.commandName} was found.`);
+        return;
+    }
+
+
+    try {
+        await command.execute(interaction);
+    } catch (error) {
+        console.error(`Error executing ${interaction.commandName}:`, error);
+        if (interaction.replied || interaction.deferred) {
+            await interaction.followUp({ content: 'There was an error while executing this command!', ephemeral: true });
+        } else {
+            await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+        }
+    }
     console.log(interaction);
 });
+
 
 
 client.login(TOKEN);
