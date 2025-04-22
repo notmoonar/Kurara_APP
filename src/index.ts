@@ -1,4 +1,42 @@
-const dotenv = require('dotenv');
-dotenv.config();
+const { Client, Collection, Events, GatewayIntentBits } = require('discord.js');
+const { TOKEN } = require('./config.json');
+const fs = require('fs');
+const path = require('path');
+const token = process.env.TOKEN;
 
-console.log(process.env.TOKEN);
+const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+
+const folderPath = path.join(__dirname, 'commands');
+const commandFiles = fs.readdirSync(folderPath).filter((file: string) => file.endsWith('.ts'));
+
+client.commands = new Collection();
+
+client.once(Events.ClientReady, (readyClient: { user: { tag: any; }; }) => {
+    console.log(`Ready! Logged in as ${readyClient.user.tag}`);
+});
+
+for (const folder of commandFiles) {
+    const commandsPath = path.join(folderPath, folder);
+    const commandFiles = fs.readdirSync(commandsPath).filter((file: string) => file.endsWith('.ts'));
+    for (const file of commandFiles) {
+        const filePath = path.join(commandsPath, file);
+        const command = require(filePath);
+        if ('data' in command && 'execute' in command) {
+            client.commands.set(command.data.name, command);
+        }
+        else {
+            console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
+        }
+
+    }
+}
+
+client.on(Events.interactionCreate, async (interaction: {
+    isChatInputCommand(): unknown; isCommand: () => any; commandName: any; reply: (arg0: { content: string; ephemeral: boolean; }) => void; 
+}) => {
+    if (!interaction.isChatInputCommand()) return;
+    console.log(interaction);
+});
+
+
+client.login(TOKEN);
